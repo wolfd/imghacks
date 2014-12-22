@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"log"
 	"os"
@@ -35,7 +37,12 @@ func sortMapByValue(r map[int]uint32) PairList {
 }
 
 func main() {
-	reader, err := os.Open("data/input.png")
+	// Input file
+	input := fmt.Sprintf("data/%v.png", os.Args[1])
+	// Hack mode
+	mode := os.Args[2]
+
+	reader, err := os.Open(input)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,24 +56,114 @@ func main() {
 
 	rows := make(map[int]uint32)
 
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			r, g, b, a := m.At(x, y).RGBA()
-			// Sum all channels plus weight the current y value
-			rows[y] += r + g + b + a + (uint32(y) * 100)
-		}
-	}
-
-	// Sort the lines based on the values assigned above
-	sorted := sortMapByValue(rows)
+	fmt.Printf("mode: %v\n", mode)
 
 	n := image.NewRGBA(image.Rect(0, 0, bounds.Max.X, bounds.Max.Y))
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			y_swap := sorted[y].Key
-			p := m.At(x, y_swap)
-			// Actually move the pixels
-			n.Set(x, y, p)
+
+	switch mode {
+	case "sortboxwaves":
+		fmt.Println("sortbox and screw up")
+		boxWidth := bounds.Max.Y / 16
+		for box := 0; box < boxWidth; box++ {
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				for x := bounds.Min.X + (box * boxWidth); x < bounds.Min.X+((box+1)*boxWidth) || x < bounds.Max.X; x++ {
+					r, g, b, a := m.At(x, y).RGBA()
+					// Sum all channels plus weight the current y value
+					rows[y] += r + g + b + a + (uint32(y)*10 + uint32(x)*25)
+				}
+			}
+
+			// Sort the lines based on the values assigned above
+			sorted := sortMapByValue(rows)
+
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				for x := bounds.Min.X + (box * boxWidth); x < bounds.Min.X+((box+1)*boxWidth) || x < bounds.Max.X; x++ {
+					y_swap := sorted[y].Key
+					p := m.At((x+box)%bounds.Max.X, y_swap)
+					// Actually move the pixels
+					r, g, b, a := p.RGBA()
+
+					colors := [3]uint8{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8)}
+					a_ := uint8(a >> 8)
+					c := box
+					q := color.NRGBA{
+						R: colors[c%3],
+						G: colors[(c+1)%3],
+						B: colors[(c+2)%3],
+						A: a_,
+					}
+
+					n.Set(x, y, q)
+				}
+			}
+		}
+	case "sortbox":
+		fmt.Println("sortbox and screw up")
+		boxWidth := bounds.Max.Y / 16
+		for box := 0; box < boxWidth; box++ {
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				for x := bounds.Min.X + (box * boxWidth); x < bounds.Min.X+((box+1)*boxWidth) || x < bounds.Max.X; x++ {
+					r, g, b, a := m.At(x, y).RGBA()
+					// Sum all channels plus weight the current y value
+					rows[y] += r + g + b + a + (uint32(y) * 100)
+				}
+			}
+
+			// Sort the lines based on the values assigned above
+			sorted := sortMapByValue(rows)
+
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				for x := bounds.Min.X + (box * boxWidth); x < bounds.Min.X+((box+1)*boxWidth) || x < bounds.Max.X; x++ {
+					y_swap := sorted[y].Key
+					p := m.At(x, y_swap)
+					// Actually move the pixels
+					n.Set(x, y, p)
+				}
+			}
+		}
+	case "waves":
+		fmt.Println("waves and screw up")
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				r, g, b, a := m.At(x, y).RGBA()
+				// Sum all channels plus weight the current y value
+				rows[y] += r + g + b + a + (uint32(y) * 100)
+			}
+		}
+
+		// Sort the lines based on the values assigned above
+		sorted := sortMapByValue(rows)
+
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				y_swap := sorted[y].Key
+				p := m.At((x+(y*y)/(x+1))%bounds.Max.X, y_swap)
+				// Actually move the pixels
+				n.Set(x, y, p)
+			}
+		}
+	case "sort":
+		fmt.Println("sort and screw up")
+		fallthrough
+	default:
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				r, g, b, a := m.At(x, y).RGBA()
+				// Sum all channels plus weight the current y value
+				rows[y] += r + g + b + a + (uint32(y) * 100)
+			}
+		}
+
+		// Sort the lines based on the values assigned above
+		sorted := sortMapByValue(rows)
+
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				y_swap := sorted[y].Key
+				p := m.At(x, y_swap)
+				// Actually move the pixels
+				n.Set(x, y, p)
+			}
 		}
 	}
 
